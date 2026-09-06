@@ -1,0 +1,6 @@
+{
+  "name": "FoundIt",
+  "description": "A modern social lost-and-found platform with liquid glass UI, location discovery, image search, and secure item claims.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

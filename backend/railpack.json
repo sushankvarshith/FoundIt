@@ -1,3 +1,16 @@
 {
-  "provider": "java"
+  "$schema": "https://schema.railpack.com",
+  "provider": "java",
+  "steps": {
+    "build": {
+      "commands": [
+        "mkdir -p target/classes",
+        "find src -name \"*.java\" > sources.txt",
+        "javac -cp \"lib/*\" -d target/classes @sources.txt"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "java -cp \"target/classes:lib/*\" server.FoundItServer"
+  }
 }

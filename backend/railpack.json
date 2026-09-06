@@ -5,7 +5,7 @@
     "build": {
       "commands": [
         "mkdir -p target/classes",
-        "find src -name \"*.java\" > sources.txt",
+        "find . -type f -name \"*.java\" > sources.txt",
         "javac -cp \"lib/*\" -d target/classes @sources.txt"
       ]
     }

@@ -11,19 +11,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Manages JDBC connections to MySQL database (XAMPP / MariaDB / MySQL 8.0+).
  * Features an intelligent dual-mode architecture:
  * 1. Primary: MySQL Database via JDBC
- * 2. Fallback: Thread-Safe In-Memory Cache if MySQL service is not yet started in XAMPP.
+ * 2. Fallback: Thread-Safe In-Memory Cache if MySQL service is not yet started
+ * in XAMPP.
  * This guarantees the project ALWAYS runs reliably without crashing!
  */
 public class DatabaseManager {
 
     private static DatabaseManager instance;
 
-    // Database connection credentials (Standard XAMPP default is root with no password)
-    // private static final String DB_URL = "jdbc:mysql://localhost:3306/foundit_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    // Database connection credentials (Standard XAMPP default is root with no
+    // password)
+    // private static final String DB_URL =
+    // "jdbc:mysql://localhost:3306/foundit_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
     // private static final String DB_USER = "root";
     // private static final String DB_PASS = "";
 
-    private static final String DB_URL ="jdbc:mysql://mysql-9ea700c-sushankvarshith16-afad.j.aivencloud.com:27678/foundit_db?sslMode=REQUIRED";
+    private static final String DB_URL = "jdbc:mysql://mysql-9ea700c-sushankvarshith16-afad.j.aivencloud.com:27678/foundit_db?sslMode=REQUIRED";
 
     private static final String DB_USER = "avnadmin";
 
@@ -65,7 +68,7 @@ public class DatabaseManager {
             // Attempt connection to MySQL server
             mysqlConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
             usingMySQL = true;
-            System.out.println("[DB] \u2705 CONNECTED TO MYSQL (foundit_db on localhost:3306)!");
+            System.out.println("[DB] \u2705 CONNECTED TO MYSQL (" + DB_URL + ")!");
 
             // Create tables if they do not exist
             createTablesIfNotExist(mysqlConnection);
@@ -77,8 +80,10 @@ public class DatabaseManager {
             System.out.println("[DB] Note: MySQL JDBC driver not in classpath. Using resilient in-memory storage.");
             usingMySQL = false;
         } catch (SQLException e) {
-            System.out.println("[DB] \u26A0\uFE0F MySQL server is not running on localhost:3306 (" + e.getMessage() + ")");
-            System.out.println("[DB] \u2139\uFE0F Tip: Open XAMPP Control Panel and start MySQL to persist data to SQL.");
+            System.out.println(
+                    "[DB] \u26A0\uFE0F MySQL server is not running on localhost:3306 (" + e.getMessage() + ")");
+            System.out
+                    .println("[DB] \u2139\uFE0F Tip: Open XAMPP Control Panel and start MySQL to persist data to SQL.");
             System.out.println("[DB] \u2705 Seamlessly running in In-Memory Mode (All features remain 100% active).");
             usingMySQL = false;
         }
@@ -91,104 +96,104 @@ public class DatabaseManager {
         try (Statement stmt = conn.createStatement()) {
             // Users table
             stmt.execute("CREATE TABLE IF NOT EXISTS users (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "name VARCHAR(120) NOT NULL, " +
-                "username VARCHAR(60) NOT NULL UNIQUE, " +
-                "email VARCHAR(120) NOT NULL UNIQUE, " +
-                "password_hash VARCHAR(255) NOT NULL DEFAULT '', " +
-                "phone VARCHAR(30) DEFAULT '', " +
-                "avatar VARCHAR(500) DEFAULT '', " +
-                "bio TEXT, " +
-                "location VARCHAR(120) DEFAULT '', " +
-                "city VARCHAR(80) DEFAULT '', " +
-                "reputation_score INT DEFAULT 50, " +
-                "is_community_helper BOOLEAN DEFAULT FALSE, " +
-                "lost_reports INT DEFAULT 0, " +
-                "found_reports INT DEFAULT 0, " +
-                "successful_returns INT DEFAULT 0, " +
-                "helpful_actions INT DEFAULT 0" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "name VARCHAR(120) NOT NULL, " +
+                    "username VARCHAR(60) NOT NULL UNIQUE, " +
+                    "email VARCHAR(120) NOT NULL UNIQUE, " +
+                    "password_hash VARCHAR(255) NOT NULL DEFAULT '', " +
+                    "phone VARCHAR(30) DEFAULT '', " +
+                    "avatar VARCHAR(500) DEFAULT '', " +
+                    "bio TEXT, " +
+                    "location VARCHAR(120) DEFAULT '', " +
+                    "city VARCHAR(80) DEFAULT '', " +
+                    "reputation_score INT DEFAULT 50, " +
+                    "is_community_helper BOOLEAN DEFAULT FALSE, " +
+                    "lost_reports INT DEFAULT 0, " +
+                    "found_reports INT DEFAULT 0, " +
+                    "successful_returns INT DEFAULT 0, " +
+                    "helpful_actions INT DEFAULT 0" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Items table
             stmt.execute("CREATE TABLE IF NOT EXISTS items (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "type ENUM('lost', 'found') NOT NULL, " +
-                "title VARCHAR(200) NOT NULL, " +
-                "category VARCHAR(60) NOT NULL, " +
-                "brand VARCHAR(100) DEFAULT '', " +
-                "model VARCHAR(100) DEFAULT '', " +
-                "color VARCHAR(60) NOT NULL, " +
-                "description TEXT NOT NULL, " +
-                "identifying_features TEXT, " +
-                "images TEXT, " +
-                "location_name VARCHAR(150) NOT NULL, " +
-                "city VARCHAR(80) NOT NULL, " +
-                "neighborhood VARCHAR(100) NOT NULL, " +
-                "distance_km DECIMAL(6,2) DEFAULT 0.0, " +
-                "lat DECIMAL(10,6) DEFAULT 0.0, " +
-                "lng DECIMAL(10,6) DEFAULT 0.0, " +
-                "approximate BOOLEAN DEFAULT TRUE, " +
-                "date_occurred VARCHAR(80) NOT NULL, " +
-                "date_reported VARCHAR(60) NOT NULL, " +
-                "status ENUM('active', 'submitted', 'found', 'resolved') NOT NULL DEFAULT 'active', " +
-                "has_reward BOOLEAN DEFAULT FALSE, " +
-                "reward_amount DECIMAL(10,2) DEFAULT 0.0, " +
-                "reward_currency VARCHAR(10) DEFAULT '₹', " +
-                "reward_note TEXT, " +
-                "uploader_id VARCHAR(64) NOT NULL, " +
-                "contact_preference VARCHAR(40) DEFAULT 'foundit_chat', " +
-                "likes_count INT DEFAULT 0, " +
-                "comments_count INT DEFAULT 0, " +
-                "shares_count INT DEFAULT 0" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "type ENUM('lost', 'found') NOT NULL, " +
+                    "title VARCHAR(200) NOT NULL, " +
+                    "category VARCHAR(60) NOT NULL, " +
+                    "brand VARCHAR(100) DEFAULT '', " +
+                    "model VARCHAR(100) DEFAULT '', " +
+                    "color VARCHAR(60) NOT NULL, " +
+                    "description TEXT NOT NULL, " +
+                    "identifying_features TEXT, " +
+                    "images TEXT, " +
+                    "location_name VARCHAR(150) NOT NULL, " +
+                    "city VARCHAR(80) NOT NULL, " +
+                    "neighborhood VARCHAR(100) NOT NULL, " +
+                    "distance_km DECIMAL(6,2) DEFAULT 0.0, " +
+                    "lat DECIMAL(10,6) DEFAULT 0.0, " +
+                    "lng DECIMAL(10,6) DEFAULT 0.0, " +
+                    "approximate BOOLEAN DEFAULT TRUE, " +
+                    "date_occurred VARCHAR(80) NOT NULL, " +
+                    "date_reported VARCHAR(60) NOT NULL, " +
+                    "status ENUM('active', 'submitted', 'found', 'resolved') NOT NULL DEFAULT 'active', " +
+                    "has_reward BOOLEAN DEFAULT FALSE, " +
+                    "reward_amount DECIMAL(10,2) DEFAULT 0.0, " +
+                    "reward_currency VARCHAR(10) DEFAULT '₹', " +
+                    "reward_note TEXT, " +
+                    "uploader_id VARCHAR(64) NOT NULL, " +
+                    "contact_preference VARCHAR(40) DEFAULT 'foundit_chat', " +
+                    "likes_count INT DEFAULT 0, " +
+                    "comments_count INT DEFAULT 0, " +
+                    "shares_count INT DEFAULT 0" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Claims table
             stmt.execute("CREATE TABLE IF NOT EXISTS claims (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "item_id VARCHAR(64) NOT NULL, " +
-                "item_title VARCHAR(200) NOT NULL, " +
-                "claimant_id VARCHAR(64) NOT NULL, " +
-                "status VARCHAR(40) NOT NULL DEFAULT 'pending', " +
-                "answers TEXT, " +
-                "contact_note TEXT, " +
-                "created_at VARCHAR(60) NOT NULL" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "item_id VARCHAR(64) NOT NULL, " +
+                    "item_title VARCHAR(200) NOT NULL, " +
+                    "claimant_id VARCHAR(64) NOT NULL, " +
+                    "status VARCHAR(40) NOT NULL DEFAULT 'pending', " +
+                    "answers TEXT, " +
+                    "contact_note TEXT, " +
+                    "created_at VARCHAR(60) NOT NULL" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Comments table
             stmt.execute("CREATE TABLE IF NOT EXISTS comments (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "item_id VARCHAR(64) NOT NULL, " +
-                "user_id VARCHAR(64) NOT NULL, " +
-                "user_name VARCHAR(120) NOT NULL, " +
-                "user_avatar VARCHAR(500) DEFAULT '', " +
-                "comment_text TEXT NOT NULL, " +
-                "likes_count INT DEFAULT 0, " +
-                "created_at VARCHAR(60) NOT NULL" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "item_id VARCHAR(64) NOT NULL, " +
+                    "user_id VARCHAR(64) NOT NULL, " +
+                    "user_name VARCHAR(120) NOT NULL, " +
+                    "user_avatar VARCHAR(500) DEFAULT '', " +
+                    "comment_text TEXT NOT NULL, " +
+                    "likes_count INT DEFAULT 0, " +
+                    "created_at VARCHAR(60) NOT NULL" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Messages table
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_messages (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "conversation_id VARCHAR(100) NOT NULL, " +
-                "sender_id VARCHAR(64) NOT NULL, " +
-                "receiver_id VARCHAR(64) NOT NULL, " +
-                "item_id VARCHAR(64) DEFAULT NULL, " +
-                "message_text TEXT NOT NULL, " +
-                "is_read BOOLEAN DEFAULT FALSE, " +
-                "sent_at VARCHAR(60) NOT NULL" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "conversation_id VARCHAR(100) NOT NULL, " +
+                    "sender_id VARCHAR(64) NOT NULL, " +
+                    "receiver_id VARCHAR(64) NOT NULL, " +
+                    "item_id VARCHAR(64) DEFAULT NULL, " +
+                    "message_text TEXT NOT NULL, " +
+                    "is_read BOOLEAN DEFAULT FALSE, " +
+                    "sent_at VARCHAR(60) NOT NULL" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             // Notifications table
             stmt.execute("CREATE TABLE IF NOT EXISTS notifications (" +
-                "id VARCHAR(64) PRIMARY KEY, " +
-                "user_id VARCHAR(64) NOT NULL, " +
-                "type VARCHAR(40) NOT NULL, " +
-                "title VARCHAR(200) NOT NULL, " +
-                "message TEXT NOT NULL, " +
-                "item_id VARCHAR(64) DEFAULT NULL, " +
-                "is_read BOOLEAN DEFAULT FALSE, " +
-                "created_at VARCHAR(60) NOT NULL" +
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    "id VARCHAR(64) PRIMARY KEY, " +
+                    "user_id VARCHAR(64) NOT NULL, " +
+                    "type VARCHAR(40) NOT NULL, " +
+                    "title VARCHAR(200) NOT NULL, " +
+                    "message TEXT NOT NULL, " +
+                    "item_id VARCHAR(64) DEFAULT NULL, " +
+                    "is_read BOOLEAN DEFAULT FALSE, " +
+                    "created_at VARCHAR(60) NOT NULL" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
             System.out.println("[DB] Verified all SQL tables are present.");
         } catch (SQLException e) {
@@ -198,23 +203,29 @@ public class DatabaseManager {
 
     private void seedMySQLIfEmpty(Connection conn) {
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM items")) {
+                ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM items")) {
             if (rs.next() && rs.getInt(1) == 0) {
                 System.out.println("[DB] Items table is empty. Seeding initial posts into MySQL...");
                 // Insert user
-                stmt.execute("INSERT IGNORE INTO users (id, name, username, email, phone, avatar, bio, location, city, reputation_score, is_community_helper) " +
-                    "VALUES ('usr_me', 'Arjun Rao', 'arjun_foundit', 'arjun.rao@gmail.com', '+91 98765 43210', " +
-                    "'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', " +
-                    "'Community volunteer based in Nellore, Andhra Pradesh.', 'Magunta Layout, Nellore', 'Nellore', 98, 1);");
+                stmt.execute(
+                        "INSERT IGNORE INTO users (id, name, username, email, phone, avatar, bio, location, city, reputation_score, is_community_helper) "
+                                +
+                                "VALUES ('usr_me', 'Arjun Rao', 'arjun_foundit', 'arjun.rao@gmail.com', '+91 98765 43210', "
+                                +
+                                "'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', "
+                                +
+                                "'Community volunteer based in Nellore, Andhra Pradesh.', 'Magunta Layout, Nellore', 'Nellore', 98, 1);");
 
                 // Seed items
                 for (ItemPost p : getInitialSeedPosts()) {
                     PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO items (id, type, title, category, brand, model, color, description, identifying_features, images, " +
-                        "location_name, city, neighborhood, distance_km, lat, lng, approximate, date_occurred, date_reported, status, " +
-                        "has_reward, reward_amount, reward_currency, reward_note, uploader_id, contact_preference, likes_count, comments_count, shares_count) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                    );
+                            "INSERT INTO items (id, type, title, category, brand, model, color, description, identifying_features, images, "
+                                    +
+                                    "location_name, city, neighborhood, distance_km, lat, lng, approximate, date_occurred, date_reported, status, "
+                                    +
+                                    "has_reward, reward_amount, reward_currency, reward_note, uploader_id, contact_preference, likes_count, comments_count, shares_count) "
+                                    +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     ps.setString(1, p.getId());
                     ps.setString(2, p.getType());
                     ps.setString(3, p.getTitle());
@@ -256,9 +267,9 @@ public class DatabaseManager {
     private void seedInMemoryStorage() {
         // Current user
         User me = new User("usr_me", "Arjun Rao", "arjun_foundit", "arjun.rao@gmail.com", "+91 98765 43210",
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-            "Community volunteer based in Nellore, Andhra Pradesh. Passionate about returning lost belongings to rightful owners.",
-            "Magunta Layout, Nellore", "Nellore");
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+                "Community volunteer based in Nellore, Andhra Pradesh. Passionate about returning lost belongings to rightful owners.",
+                "Magunta Layout, Nellore", "Nellore");
         memoryUsers.put(me.getId(), me);
 
         // Seed initial posts
@@ -266,19 +277,22 @@ public class DatabaseManager {
 
         // Sample comments
         memoryComments.add(new Comment("cmt_1", "post_1", "usr_2", "Sneha Reddy",
-            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-            "I saw a similar phone kept at the juice stall cash counter. Have you asked the owner Ramesh?", "1 hour ago", 4));
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+                "I saw a similar phone kept at the juice stall cash counter. Have you asked the owner Ramesh?",
+                "1 hour ago", 4));
         memoryComments.add(new Comment("cmt_2", "post_1", "usr_1", "Rohan Sharma",
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-            "Checked with Ramesh just now, he said someone handed an auto driver a phone! Following up.", "45 mins ago", 2));
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+                "Checked with Ramesh just now, he said someone handed an auto driver a phone! Following up.",
+                "45 mins ago", 2));
 
         // Sample notifications
         memoryNotifications.add(new Notification("notif_1", "usr_me", "match_found", "Possible Match Near You",
-            "A Bellroy wallet found in Children's Park matches items reported nearby.", "post_2", false, "10 mins ago"));
+                "A Bellroy wallet found in Children's Park matches items reported nearby.", "post_2", false,
+                "10 mins ago"));
         memoryNotifications.add(new Notification("notif_2", "usr_me", "comment", "New Comment on MacBook Air",
-            "Sneha Reddy commented on your lost MacBook report.", "post_3", false, "1 hour ago"));
+                "Sneha Reddy commented on your lost MacBook report.", "post_3", false, "1 hour ago"));
         memoryNotifications.add(new Notification("notif_3", "usr_me", "claim_received", "Claim Submitted for Review",
-            "A user submitted proof of ownership for Sony Headphones.", "post_8", true, "1 day ago"));
+                "A user submitted proof of ownership for Sony Headphones.", "post_8", true, "1 day ago"));
     }
 
     private List<ItemPost> getInitialSeedPosts() {
@@ -293,12 +307,12 @@ public class DatabaseManager {
         p1.setBrand("Apple");
         p1.setModel("iPhone 15 Pro");
         p1.setColor("Natural Titanium / Gray");
-        p1.setDescription("Left behind in an auto or fruit juice stall near VRC Centre Clock Tower around 8:30 PM. Has a matte black Spigen case with a tiny green sticker on the lower back.");
+        p1.setDescription(
+                "Left behind in an auto or fruit juice stall near VRC Centre Clock Tower around 8:30 PM. Has a matte black Spigen case with a tiny green sticker on the lower back.");
         p1.setIdentifyingFeatures("Matte black Spigen case, small green sticker, slight scratch near speaker grill");
         p1.setImages(Arrays.asList(
-            "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=800&auto=format&fit=crop&q=80"));
         p1.setLocationName("VRC Centre Clock Tower & Shopping Complex");
         p1.setCity("Nellore");
         p1.setNeighborhood("VRC Centre");
@@ -316,7 +330,8 @@ public class DatabaseManager {
         p1.setUploaderId("usr_1");
         p1.setUploaderName("Rohan Sharma");
         p1.setUploaderUsername("rohans_99");
-        p1.setUploaderAvatar("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80");
+        p1.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80");
         p1.setLikesCount(24);
         p1.setCommentsCount(6);
         p1.setSharesCount(12);
@@ -333,11 +348,11 @@ public class DatabaseManager {
         p2.setBrand("Bellroy");
         p2.setModel("Hide & Seek Slim");
         p2.setColor("Caramel Tan");
-        p2.setDescription("Found on a stone bench in Children's Park near Gandhi Nagar around 5:15 PM. Contains metro card, student ID, and several cards. Safely kept with park security.");
+        p2.setDescription(
+                "Found on a stone bench in Children's Park near Gandhi Nagar around 5:15 PM. Contains metro card, student ID, and several cards. Safely kept with park security.");
         p2.setIdentifyingFeatures("Stitched corner, faint coffee droplet mark near logo embossed stamp");
         p2.setImages(Collections.singletonList(
-            "https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop&q=80"));
         p2.setLocationName("Children's Park Gandhi Nagar Gate 2");
         p2.setCity("Nellore");
         p2.setNeighborhood("Gandhi Nagar");
@@ -352,7 +367,8 @@ public class DatabaseManager {
         p2.setUploaderId("usr_2");
         p2.setUploaderName("Sneha Reddy");
         p2.setUploaderUsername("sneha_r");
-        p2.setUploaderAvatar("https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80");
+        p2.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80");
         p2.setLikesCount(18);
         p2.setCommentsCount(3);
         p2.setSharesCount(5);
@@ -368,12 +384,12 @@ public class DatabaseManager {
         p3.setBrand("Apple");
         p3.setModel("MacBook Air M2 2022");
         p3.setColor("Midnight Blue");
-        p3.setDescription("Forgot my laptop sleeve bag at Cafe Coffee Day / Tea Lounge near Trunk Road. Bag is charcoal gray with orange zipper pullers. Crucial research project files inside.");
+        p3.setDescription(
+                "Forgot my laptop sleeve bag at Cafe Coffee Day / Tea Lounge near Trunk Road. Bag is charcoal gray with orange zipper pullers. Crucial research project files inside.");
         p3.setIdentifyingFeatures("Sticker of NASA Artemis mission and GitHub Octocat on lid");
         p3.setImages(Arrays.asList(
-            "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=800&auto=format&fit=crop&q=80"));
         p3.setLocationName("Trunk Road Central Plaza");
         p3.setCity("Nellore");
         p3.setNeighborhood("Trunk Road");
@@ -391,7 +407,8 @@ public class DatabaseManager {
         p3.setUploaderId("usr_me");
         p3.setUploaderName("Arjun Rao");
         p3.setUploaderUsername("arjun_foundit");
-        p3.setUploaderAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80");
+        p3.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80");
         p3.setLikesCount(42);
         p3.setCommentsCount(11);
         p3.setSharesCount(28);
@@ -407,11 +424,11 @@ public class DatabaseManager {
         p4.setBrand("Royal Enfield");
         p4.setModel("Classic 350");
         p4.setColor("Brass / Silver");
-        p4.setDescription("Discovered hanging near the billing counter at More Supermarket Pogathota. Has three keys and a circular brass medallion with engraved RE crest.");
+        p4.setDescription(
+                "Discovered hanging near the billing counter at More Supermarket Pogathota. Has three keys and a circular brass medallion with engraved RE crest.");
         p4.setIdentifyingFeatures("Small blue rubber ring on the ignition key");
         p4.setImages(Collections.singletonList(
-            "https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=800&auto=format&fit=crop&q=80"));
         p4.setLocationName("More Supermarket Parking Pogathota");
         p4.setCity("Nellore");
         p4.setNeighborhood("Pogathota");
@@ -426,7 +443,8 @@ public class DatabaseManager {
         p4.setUploaderId("usr_3");
         p4.setUploaderName("Vikram Varma");
         p4.setUploaderUsername("vikram_v");
-        p4.setUploaderAvatar("https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80");
+        p4.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80");
         p4.setLikesCount(9);
         p4.setCommentsCount(2);
         p4.setSharesCount(3);
@@ -442,12 +460,12 @@ public class DatabaseManager {
         p5.setBrand("Golden Retriever");
         p5.setModel("4 Months Old");
         p5.setColor("Golden / Cream");
-        p5.setDescription("Bruno slipped out of our front garden gate near Magunta Layout 3rd cross street during evening fireworks. He is very friendly, answers to 'Bruno', wearing a red nylon collar with a small bell.");
+        p5.setDescription(
+                "Bruno slipped out of our front garden gate near Magunta Layout 3rd cross street during evening fireworks. He is very friendly, answers to 'Bruno', wearing a red nylon collar with a small bell.");
         p5.setIdentifyingFeatures("Small white patch on his chest, red collar with bell");
         p5.setImages(Arrays.asList(
-            "https://images.unsplash.com/photo-1552053831-71594a27632d?w=800&auto=format&fit=crop&q=80",
-            "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1552053831-71594a27632d?w=800&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&auto=format&fit=crop&q=80"));
         p5.setLocationName("Magunta Layout 3rd Cross Street");
         p5.setCity("Nellore");
         p5.setNeighborhood("Magunta Layout");
@@ -465,7 +483,8 @@ public class DatabaseManager {
         p5.setUploaderId("usr_4");
         p5.setUploaderName("Priya Deshmukh");
         p5.setUploaderUsername("priya_d");
-        p5.setUploaderAvatar("https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80");
+        p5.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80");
         p5.setLikesCount(87);
         p5.setCommentsCount(19);
         p5.setSharesCount(64);
@@ -481,11 +500,11 @@ public class DatabaseManager {
         p6.setBrand("Fossil");
         p6.setModel("The Minimalist 3H");
         p6.setColor("Rose Gold / Brown");
-        p6.setDescription("Found resting on the sink counter at Nellore Railway Station Waiting Hall (Platform 1). Dial is intact, small scratches on back plate.");
+        p6.setDescription(
+                "Found resting on the sink counter at Nellore Railway Station Waiting Hall (Platform 1). Dial is intact, small scratches on back plate.");
         p6.setIdentifyingFeatures("Initials S.K. faintly laser etched on back buckle");
         p6.setImages(Collections.singletonList(
-            "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=800&auto=format&fit=crop&q=80"));
         p6.setLocationName("Nellore Railway Station Platform 1");
         p6.setCity("Nellore");
         p6.setNeighborhood("Railway Station Area");
@@ -500,7 +519,8 @@ public class DatabaseManager {
         p6.setUploaderId("usr_2");
         p6.setUploaderName("Sneha Reddy");
         p6.setUploaderUsername("sneha_r");
-        p6.setUploaderAvatar("https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80");
+        p6.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80");
         p6.setLikesCount(15);
         p6.setCommentsCount(4);
         p6.setSharesCount(7);
@@ -516,11 +536,11 @@ public class DatabaseManager {
         p7.setBrand("Samsonite");
         p7.setModel("Omni PC 20\"");
         p7.setColor("Navy Blue");
-        p7.setDescription("Accidentally interchanged or forgotten in APSRTC Super Luxury bus from Vijayawada to Nellore, reached RTC Central Bus Stand around 6:00 AM.");
+        p7.setDescription(
+                "Accidentally interchanged or forgotten in APSRTC Super Luxury bus from Vijayawada to Nellore, reached RTC Central Bus Stand around 6:00 AM.");
         p7.setIdentifyingFeatures("Bright yellow luggage strap with TSA lock combination 842");
         p7.setImages(Collections.singletonList(
-            "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?w=800&auto=format&fit=crop&q=80"));
         p7.setLocationName("APSRTC Central Bus Station Depot");
         p7.setCity("Nellore");
         p7.setNeighborhood("RTC Complex");
@@ -538,7 +558,8 @@ public class DatabaseManager {
         p7.setUploaderId("usr_1");
         p7.setUploaderName("Rohan Sharma");
         p7.setUploaderUsername("rohans_99");
-        p7.setUploaderAvatar("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80");
+        p7.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80");
         p7.setLikesCount(31);
         p7.setCommentsCount(8);
         p7.setSharesCount(14);
@@ -554,11 +575,11 @@ public class DatabaseManager {
         p8.setBrand("Sony");
         p8.setModel("WH-1000XM5");
         p8.setColor("Silver / Off-White");
-        p8.setDescription("Left on the gym bench at Cult.fit / Gold's Gym near Dargamitta around 7:30 PM. In original gray protective travel case with aux cable.");
+        p8.setDescription(
+                "Left on the gym bench at Cult.fit / Gold's Gym near Dargamitta around 7:30 PM. In original gray protective travel case with aux cable.");
         p8.setIdentifyingFeatures("Tiny nick on right ear cushion hinge");
         p8.setImages(Collections.singletonList(
-            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80"
-        ));
+                "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80"));
         p8.setLocationName("Fitness Center Dargamitta Main Road");
         p8.setCity("Nellore");
         p8.setNeighborhood("Dargamitta");
@@ -573,7 +594,8 @@ public class DatabaseManager {
         p8.setUploaderId("usr_me");
         p8.setUploaderName("Arjun Rao");
         p8.setUploaderUsername("arjun_foundit");
-        p8.setUploaderAvatar("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80");
+        p8.setUploaderAvatar(
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80");
         p8.setLikesCount(28);
         p8.setCommentsCount(5);
         p8.setSharesCount(9);
@@ -584,15 +606,43 @@ public class DatabaseManager {
     }
 
     // Accessors
-    public boolean isUsingMySQL() { return usingMySQL; }
-    public Connection getMySQLConnection() { return mysqlConnection; }
+    public boolean isUsingMySQL() {
+        return usingMySQL;
+    }
 
-    public Map<String, User> getMemoryUsers() { return memoryUsers; }
-    public List<ItemPost> getMemoryItems() { return memoryItems; }
-    public List<Claim> getMemoryClaims() { return memoryClaims; }
-    public List<Comment> getMemoryComments() { return memoryComments; }
-    public List<ChatMessage> getMemoryMessages() { return memoryMessages; }
-    public List<Notification> getMemoryNotifications() { return memoryNotifications; }
-    public Set<String> getMemoryLikedItems() { return memoryLikedItems; }
-    public Set<String> getMemorySavedItems() { return memorySavedItems; }
+    public Connection getMySQLConnection() {
+        return mysqlConnection;
+    }
+
+    public Map<String, User> getMemoryUsers() {
+        return memoryUsers;
+    }
+
+    public List<ItemPost> getMemoryItems() {
+        return memoryItems;
+    }
+
+    public List<Claim> getMemoryClaims() {
+        return memoryClaims;
+    }
+
+    public List<Comment> getMemoryComments() {
+        return memoryComments;
+    }
+
+    public List<ChatMessage> getMemoryMessages() {
+        return memoryMessages;
+    }
+
+    public List<Notification> getMemoryNotifications() {
+        return memoryNotifications;
+    }
+
+    public Set<String> getMemoryLikedItems() {
+        return memoryLikedItems;
+    }
+
+    public Set<String> getMemorySavedItems() {
+        return memorySavedItems;
+    }
 }

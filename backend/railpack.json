@@ -4,21 +4,13 @@
   "steps": {
     "build": {
       "commands": [
-        "echo '--- LS SRC ---'",
-        "ls -la src || echo 'src not found'",
-        "echo '--- LS SRC/SERVER ---'",
-        "ls -la src/server || echo 'src/server not found'",
-        "echo '--- FIND SRC JAVA FILES ---'",
-        "find src -type f -name \"*.java\" || echo 'find failed'",
         "mkdir -p target/classes",
-        "find src -type f -name \"*.java\" > sources.txt",
-        "echo '--- SOURCES.TXT ---'",
-        "cat sources.txt",
-        "javac -cp \"lib/*\" -d target/classes @sources.txt"
+        "find src -type f -name '*.java' > sources.txt",
+        "javac -cp 'lib/*' -d target/classes @sources.txt"
       ]
     }
   },
   "deploy": {
-    "startCommand": "java -cp \"target/classes:lib/*\" server.FoundItServer"
+    "startCommand": "java -cp 'target/classes:lib/*' server.FoundItServer"
   }
 }

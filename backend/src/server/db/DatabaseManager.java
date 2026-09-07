@@ -19,9 +19,15 @@ public class DatabaseManager {
     private static DatabaseManager instance;
 
     // Database connection credentials (Standard XAMPP default is root with no password)
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/foundit_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-    private static final String DB_USER = "root";
-    private static final String DB_PASS = "";
+    // private static final String DB_URL = "jdbc:mysql://localhost:3306/foundit_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    // private static final String DB_USER = "root";
+    // private static final String DB_PASS = "";
+
+    private static final String DB_URL ="jdbc:mysql://mysql-9ea700c-sushankvarshith16-afad.j.aivencloud.com:27678/foundit_db?sslMode=REQUIRED";
+
+    private static final String DB_USER = "avnadmin";
+
+    private static final String DB_PASS = System.getenv("DB_PASSWORD");
 
     private boolean usingMySQL = false;
     private Connection mysqlConnection = null;

@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
  */
 public class FoundItServer {
 
-    private static final int PORT = 8080;
+    private static final int PORT =Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
 
     public static void main(String[] args) {
         System.out.println("--------------------------------------------------");
@@ -35,8 +35,7 @@ public class FoundItServer {
 
         // 2. Create JDK HTTP Server
         try {
-            HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
-
+                HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", PORT), 0);
             // 3. Register REST API Endpoints
             server.createContext("/api/health", new HealthHandler());
             server.createContext("/api/posts", new PostsHandler());

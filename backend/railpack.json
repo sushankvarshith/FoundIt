@@ -5,12 +5,14 @@
     "build": {
       "commands": [
         "mkdir -p target/classes",
+        "mkdir -p target/lib",
+        "cp lib/*.jar target/lib/",
         "find src -type f -name '*.java' > sources.txt",
         "javac -cp 'lib/*' -d target/classes @sources.txt"
       ]
     }
   },
   "deploy": {
-    "startCommand": "java -cp 'target/classes:lib/*' server.FoundItServer"
+    "startCommand": "java -cp 'target/classes:target/lib/*' server.FoundItServer"
   }
 }

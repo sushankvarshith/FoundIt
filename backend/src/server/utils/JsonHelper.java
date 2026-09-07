@@ -198,6 +198,16 @@ public class JsonHelper {
         return sb.toString();
     }
 
+    public static String usersToJson(List<User> users) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < users.size(); i++) {
+            sb.append(toJson(users.get(i)));
+            if (i < users.size() - 1) sb.append(",");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     public static String toJson(Claim claim) {
         if (claim == null) return "null";
         StringBuilder answersJson = new StringBuilder("[");

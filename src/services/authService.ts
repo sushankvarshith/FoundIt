@@ -1,5 +1,6 @@
 import { CURRENT_USER } from '../data/mockData';
 import { UserProfile } from '../types';
+import { apiClient } from './apiClient';
 
 const STORAGE_KEY = 'foundit_current_user';
 const USERS_REGISTRY_KEY = 'foundit_users_registry';
@@ -339,86 +340,188 @@ export const authService = {
     return updated;
   },
 
-  login(
-    email: string,
-    password?: string
-  ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const cleanEmail = email.trim().toLowerCase();
-        const cleanPass = (password || '').trim();
+  /**
+   * Synchronize local user registry with the Java backend / MySQL database
+   */
+  async syncUsersWithBackend(): Promise<StoredAccount[]> {
+    try {
+      const remoteUsers = await apiClient.get<any[]>('/auth/users');
+      if (remoteUsers && Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+        const registry = getStoredRegistry();
+        const blocklist = getDeletedUserBlocklist();
+        let changed = false;
 
-        if (!cleanEmail) {
-          resolve({ success: false, error: 'Please enter a valid email or username.' });
-          return;
-        }
-
-        // 1. Direct check for Admin credentials: admin@gmail.com / admin1234
-        if (cleanEmail === 'admin@gmail.com') {
-          if (cleanPass === 'admin1234') {
-            const adminUser: UserProfile = {
+        for (const ru of remoteUsers) {
+          if (!ru || !ru.id || blocklist.has(ru.id) || blocklist.has(ru.username)) continue;
+          const exists = registry.some(
+            (a) => a.user.id === ru.id || a.user.email?.toLowerCase() === ru.email?.toLowerCase()
+          );
+          if (!exists) {
+            const mappedUser: UserProfile = {
               ...CURRENT_USER,
-              id: 'usr_admin',
-              role: 'admin',
-              name: 'System Administrator',
-              username: 'admin_foundit',
-              email: 'admin@gmail.com',
-              phone: '+91 99999 00000',
-              bio: 'FoundIt System Administrator with full moderation privileges across Nellore community.',
-              location: 'Central Command, Nellore',
-              city: 'Nellore',
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+              id: ru.id,
+              name: ru.name || 'Community Member',
+              username: ru.username || ru.id,
+              email: ru.email || `${ru.username || ru.id}@foundit.community`,
+              phone: ru.phone || '+91 90000 00000',
+              location: ru.location || 'Nellore, Andhra Pradesh',
+              city: ru.city || 'Nellore',
+              bio: ru.bio || 'Active FoundIt community helper.',
+              avatar: ru.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+              role: ru.role || 'user',
+              reputationScore: ru.reputationScore || 85,
+              isCommunityHelper: Boolean(ru.isCommunityHelper),
+              stats: ru.stats || {
+                lostReports: ru.lostReports || 0,
+                foundReports: ru.foundReports || 0,
+                successfulReturns: ru.successfulReturns || 0,
+                helpfulActions: ru.helpfulActions || 0,
+              },
             };
-            try {
-              sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
-            } catch {
-              // ignore
-            }
-            resolve({ success: true, user: adminUser });
-            return;
-          } else {
-            resolve({ success: false, error: 'Invalid admin password. Default admin password is admin1234' });
-            return;
+            registry.push({ user: mappedUser, passwordHash: 'password123' });
+            changed = true;
           }
         }
 
+        if (changed) {
+          saveRegistry(registry);
+        }
+        return registry;
+      }
+    } catch {
+      // offline fallback
+    }
+    return getStoredRegistry();
+  },
+
+  async login(
+    email: string,
+    password?: string
+  ): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    if (!cleanEmail) {
+      return { success: false, error: 'Please enter a valid email or username.' };
+    }
+
+    // 1. Direct check for Admin credentials: admin@gmail.com / admin1234
+    if (cleanEmail === 'admin@gmail.com') {
+      if (cleanPass === 'admin1234') {
+        const adminUser: UserProfile = {
+          ...CURRENT_USER,
+          id: 'usr_admin',
+          role: 'admin',
+          name: 'System Administrator',
+          username: 'admin_foundit',
+          email: 'admin@gmail.com',
+          phone: '+91 99999 00000',
+          bio: 'FoundIt System Administrator with full moderation privileges across Nellore community.',
+          location: 'Central Command, Nellore',
+          city: 'Nellore',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        };
+        try {
+          sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
+        } catch {
+          // ignore
+        }
+        return { success: true, user: adminUser };
+      } else {
+        return { success: false, error: 'Invalid admin password. Default admin password is admin1234' };
+      }
+    }
+
+    // 2. Attempt remote login against Java REST backend / MySQL
+    try {
+      const remoteUser = await apiClient.post<any>('/auth/login', {
+        username: cleanEmail,
+        password: cleanPass,
+      });
+
+      if (remoteUser && remoteUser.id) {
+        const mappedUser: UserProfile = {
+          ...CURRENT_USER,
+          id: remoteUser.id,
+          name: remoteUser.name || 'Community Member',
+          username: remoteUser.username || remoteUser.id,
+          email: remoteUser.email || cleanEmail,
+          phone: remoteUser.phone || '+91 90000 00000',
+          location: remoteUser.location || 'Nellore, Andhra Pradesh',
+          city: remoteUser.city || 'Nellore',
+          bio: remoteUser.bio || 'Proud member of FoundIt community.',
+          avatar: remoteUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+          role: remoteUser.role || 'user',
+          reputationScore: remoteUser.reputationScore || 85,
+          isCommunityHelper: Boolean(remoteUser.isCommunityHelper),
+          stats: remoteUser.stats || {
+            lostReports: 0,
+            foundReports: 0,
+            successfulReturns: 0,
+            helpfulActions: 0,
+          },
+        };
+
+        // Cache in local registry
         const registry = getStoredRegistry();
-        const account = registry.find(
-          (acc) =>
-            acc.user.email.toLowerCase() === cleanEmail ||
-            acc.user.username.toLowerCase() === cleanEmail
+        const existingIdx = registry.findIndex(
+          (a) => a.user.id === mappedUser.id || a.user.email.toLowerCase() === mappedUser.email.toLowerCase()
         );
-
-        if (!account) {
-          resolve({
-            success: false,
-            error: 'No account found with this email. Please check your credentials or create a new account.',
-          });
-          return;
+        if (existingIdx >= 0) {
+          registry[existingIdx].user = mappedUser;
+          if (cleanPass) registry[existingIdx].passwordHash = cleanPass;
+        } else {
+          registry.push({ user: mappedUser, passwordHash: cleanPass || 'password123' });
         }
-
-        if (cleanPass && account.passwordHash && account.passwordHash !== cleanPass) {
-          resolve({
-            success: false,
-            error: 'Incorrect password. Please verify your password.',
-          });
-          return;
-        }
+        saveRegistry(registry);
 
         try {
           sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(account.user));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mappedUser));
         } catch {
           // ignore
         }
 
-        resolve({ success: true, user: account.user });
-      }, 350);
-    });
+        return { success: true, user: mappedUser };
+      }
+    } catch {
+      // Backend unavailable, fallback to local registry
+    }
+
+    // 3. Fallback to Local Storage Registry
+    const registry = getStoredRegistry();
+    const account = registry.find(
+      (acc) =>
+        acc.user.email.toLowerCase() === cleanEmail ||
+        acc.user.username.toLowerCase() === cleanEmail
+    );
+
+    if (!account) {
+      return {
+        success: false,
+        error: 'No account found with this email. Please check your credentials or create a new account.',
+      };
+    }
+
+    if (cleanPass && account.passwordHash && account.passwordHash !== cleanPass) {
+      return {
+        success: false,
+        error: 'Incorrect password. Please verify your password.',
+      };
+    }
+
+    try {
+      sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(account.user));
+    } catch {
+      // ignore
+    }
+
+    return { success: true, user: account.user };
   },
 
-  signup(data: {
+  async signup(data: {
     name: string;
     username: string;
     email: string;
@@ -428,68 +531,81 @@ export const authService = {
     bio?: string;
     avatar?: string;
   }): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const cleanEmail = data.email.trim().toLowerCase();
-        const cleanUsername =
-          data.username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') ||
-          `user_${Date.now().toString().slice(-4)}`;
+    const cleanEmail = data.email.trim().toLowerCase();
+    const cleanUsername =
+      data.username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') ||
+      `user_${Date.now().toString().slice(-4)}`;
 
-        const registry = getStoredRegistry();
-        const exists = registry.some(
-          (acc) =>
-            acc.user.email.toLowerCase() === cleanEmail ||
-            acc.user.username.toLowerCase() === cleanUsername
-        );
+    const registry = getStoredRegistry();
+    const exists = registry.some(
+      (acc) =>
+        acc.user.email.toLowerCase() === cleanEmail ||
+        acc.user.username.toLowerCase() === cleanUsername
+    );
 
-        if (exists) {
-          resolve({
-            success: false,
-            error: 'An account with this email or username already exists. Please sign in.',
-          });
-          return;
-        }
+    if (exists) {
+      return {
+        success: false,
+        error: 'An account with this email or username already exists. Please sign in.',
+      };
+    }
 
-        const newUser: UserProfile = {
-          ...CURRENT_USER,
-          id: `usr_${Date.now()}`,
-          role: 'user',
-          name: data.name.trim(),
-          username: cleanUsername,
-          email: cleanEmail,
-          phone: data.phone?.trim() || '+91 90000 00000',
-          location: data.location?.trim() || 'Nellore, Andhra Pradesh',
-          city: 'Nellore',
-          bio: data.bio?.trim() || 'Proud member of FoundIt community.',
-          avatar:
-            data.avatar ||
-            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-          reputationScore: 80,
-          isCommunityHelper: false,
-          stats: {
-            lostReports: 0,
-            foundReports: 0,
-            successfulReturns: 0,
-            helpfulActions: 0,
-          },
-        };
+    const newUser: UserProfile = {
+      ...CURRENT_USER,
+      id: `usr_${Date.now()}`,
+      role: 'user',
+      name: data.name.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
+      phone: data.phone?.trim() || '+91 90000 00000',
+      location: data.location?.trim() || 'Nellore, Andhra Pradesh',
+      city: 'Nellore',
+      bio: data.bio?.trim() || 'Proud member of FoundIt community.',
+      avatar:
+        data.avatar ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+      reputationScore: 80,
+      isCommunityHelper: false,
+      stats: {
+        lostReports: 0,
+        foundReports: 0,
+        successfulReturns: 0,
+        helpfulActions: 0,
+      },
+    };
 
-        registry.push({
-          user: newUser,
-          passwordHash: data.password || 'password123',
-        });
-        saveRegistry(registry);
-
-        try {
-          sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-        } catch {
-          // ignore
-        }
-
-        resolve({ success: true, user: newUser });
-      }, 400);
+    registry.push({
+      user: newUser,
+      passwordHash: data.password || 'password123',
     });
+    saveRegistry(registry);
+
+    try {
+      sessionStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    } catch {
+      // ignore
+    }
+
+    // Sync new user to Java Backend & MySQL in background
+    apiClient
+      .post('/auth/register', {
+        id: newUser.id,
+        name: newUser.name,
+        username: newUser.username,
+        email: newUser.email,
+        password: data.password || 'password123',
+        phone: newUser.phone,
+        location: newUser.location,
+        city: newUser.city,
+        bio: newUser.bio,
+        avatar: newUser.avatar,
+      })
+      .catch(() => {
+        // Offline fallback already stored locally
+      });
+
+    return { success: true, user: newUser };
   },
 
   logout(): void {

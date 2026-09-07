@@ -21,43 +21,45 @@ public class ItemDao {
         }
 
         List<ItemPost> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT * FROM items WHERE 1=1 ");
+        StringBuilder sql = new StringBuilder(
+            "SELECT items.*, u.name AS uploader_name, u.username AS uploader_username, u.avatar AS uploader_avatar " +
+            "FROM items LEFT JOIN users u ON items.uploader_id = u.id WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
 
         if (type != null && !type.equalsIgnoreCase("all") && !type.isEmpty()) {
-            sql.append("AND type = ? ");
+            sql.append("AND items.type = ? ");
             params.add(type.toLowerCase());
         }
         if (category != null && !category.equalsIgnoreCase("all") && !category.isEmpty()) {
-            sql.append("AND category = ? ");
+            sql.append("AND items.category = ? ");
             params.add(category);
         }
         if (neighborhood != null && !neighborhood.equalsIgnoreCase("all") && !neighborhood.isEmpty()) {
-            sql.append("AND neighborhood = ? ");
+            sql.append("AND items.neighborhood = ? ");
             params.add(neighborhood);
         }
         if (status != null && !status.equalsIgnoreCase("all") && !status.isEmpty()) {
-            sql.append("AND status = ? ");
+            sql.append("AND items.status = ? ");
             params.add(status.toLowerCase());
         }
         if (hasReward != null && hasReward) {
-            sql.append("AND has_reward = 1 ");
+            sql.append("AND items.has_reward = 1 ");
         }
         if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-            sql.append("AND (LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(brand) LIKE ? OR LOWER(model) LIKE ? OR LOWER(neighborhood) LIKE ?) ");
+            sql.append("AND (LOWER(items.title) LIKE ? OR LOWER(items.description) LIKE ? OR LOWER(items.brand) LIKE ? OR LOWER(items.model) LIKE ? OR LOWER(items.neighborhood) LIKE ?) ");
             String q = "%" + searchQuery.toLowerCase().trim() + "%";
             params.add(q); params.add(q); params.add(q); params.add(q); params.add(q);
         }
 
         // Sorting
         if ("closest".equalsIgnoreCase(sortBy)) {
-            sql.append("ORDER BY distance_km ASC ");
+            sql.append("ORDER BY items.distance_km ASC ");
         } else if ("liked".equalsIgnoreCase(sortBy)) {
-            sql.append("ORDER BY likes_count DESC ");
+            sql.append("ORDER BY items.likes_count DESC ");
         } else if ("commented".equalsIgnoreCase(sortBy)) {
-            sql.append("ORDER BY comments_count DESC ");
+            sql.append("ORDER BY items.comments_count DESC ");
         } else {
-            sql.append("ORDER BY created_at DESC ");
+            sql.append("ORDER BY items.date_reported DESC ");
         }
 
         try (PreparedStatement ps = db.getMySQLConnection().prepareStatement(sql.toString())) {
@@ -140,6 +142,25 @@ public class ItemDao {
         }
         if (post.getDateReported() == null || post.getDateReported().isEmpty()) {
             post.setDateReported(new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new java.util.Date()));
+        }
+
+        // Ensure uploader exists in users table/memory so JOIN works
+        if (post.getUploaderId() != null && !post.getUploaderId().isEmpty()) {
+            UserDao uDao = new UserDao();
+            if (uDao.getUserById(post.getUploaderId()) == null) {
+                server.models.User uStub = new server.models.User(
+                    post.getUploaderId(),
+                    post.getUploaderName() != null ? post.getUploaderName() : "Community Member",
+                    post.getUploaderUsername() != null ? post.getUploaderUsername() : post.getUploaderId(),
+                    (post.getUploaderUsername() != null ? post.getUploaderUsername() : post.getUploaderId()) + "@foundit.community",
+                    "+91 90000 00000",
+                    post.getUploaderAvatar() != null ? post.getUploaderAvatar() : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+                    "FoundIt community contributor",
+                    post.getLocationName() != null ? post.getLocationName() : "Nellore",
+                    post.getCity() != null ? post.getCity() : "Nellore"
+                );
+                uDao.register(uStub);
+            }
         }
 
         // Add to memory list
@@ -305,6 +326,14 @@ public class ItemDao {
         p.setRewardCurrency(rs.getString("reward_currency"));
         p.setRewardNote(rs.getString("reward_note"));
         p.setUploaderId(rs.getString("uploader_id"));
+        try {
+            String uName = rs.getString("uploader_name");
+            if (uName != null && !uName.isEmpty()) {
+                p.setUploaderName(uName);
+                p.setUploaderUsername(rs.getString("uploader_username"));
+                p.setUploaderAvatar(rs.getString("uploader_avatar"));
+            }
+        } catch (SQLException ignored) {}
         p.setContactPreference(rs.getString("contact_preference"));
         p.setLikesCount(rs.getInt("likes_count"));
         p.setCommentsCount(rs.getInt("comments_count"));

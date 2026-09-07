@@ -26,11 +26,8 @@ public class DatabaseManager {
     // private static final String DB_USER = "root";
     // private static final String DB_PASS = "";
 
-    private static final String DB_URL = "jdbc:mysql://mysql-9ea700c-sushankvarshith16-afad.j.aivencloud.com:27678/foundit_db?sslMode=REQUIRED";
-
-    private static final String DB_USER = "avnadmin";
-
-    private static final String DB_PASS = System.getenv("DB_PASSWORD");
+    private static final String CLOUD_DB_URL = "jdbc:mysql://mysql-9ea700c-sushankvarshith16-afad.j.aivencloud.com:27678/foundit_db?sslMode=REQUIRED";
+    private static final String LOCAL_DB_URL = "jdbc:mysql://localhost:3306/foundit_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 
     private boolean usingMySQL = false;
     private Connection mysqlConnection = null;
@@ -65,26 +62,59 @@ public class DatabaseManager {
             Class.forName("com.mysql.cj.jdbc.Driver");
             System.out.println("[DB] MySQL JDBC Driver loaded successfully.");
 
-            // Attempt connection to MySQL server
-            mysqlConnection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
-            usingMySQL = true;
-            System.out.println("[DB] \u2705 CONNECTED TO MYSQL (" + DB_URL + ")!");
+            String envUrl = System.getenv("DB_URL");
+            String envPass = System.getenv("DB_PASSWORD");
+            String envUser = System.getenv("DB_USER");
 
-            // Create tables if they do not exist
-            createTablesIfNotExist(mysqlConnection);
+            // Priority 1: Specified DB_URL from environment
+            if (envUrl != null && !envUrl.trim().isEmpty()) {
+                try {
+                    mysqlConnection = DriverManager.getConnection(envUrl.trim(), envUser != null ? envUser : "root", envPass != null ? envPass : "");
+                    usingMySQL = true;
+                    System.out.println("[DB] \u2705 CONNECTED TO MYSQL (Custom DB_URL)!");
+                } catch (SQLException e) {
+                    System.out.println("[DB] Custom DB_URL connection failed: " + e.getMessage());
+                }
+            }
 
-            // Populate sample data if items table is empty
-            seedMySQLIfEmpty(mysqlConnection);
+            // Priority 2: Aiven Cloud MySQL if DB_PASSWORD is provided
+            if (!usingMySQL && envPass != null && !envPass.trim().isEmpty()) {
+                try {
+                    mysqlConnection = DriverManager.getConnection(CLOUD_DB_URL, envUser != null ? envUser : "avnadmin", envPass.trim());
+                    usingMySQL = true;
+                    System.out.println("[DB] \u2705 CONNECTED TO AIVEN CLOUD MYSQL!");
+                } catch (SQLException e) {
+                    System.out.println("[DB] Aiven Cloud connection attempt failed: " + e.getMessage());
+                }
+            }
+
+            // Priority 3: Localhost MySQL (XAMPP / MariaDB default: root with empty password)
+            if (!usingMySQL) {
+                try {
+                    mysqlConnection = DriverManager.getConnection(LOCAL_DB_URL, "root", "");
+                    usingMySQL = true;
+                    System.out.println("[DB] \u2705 CONNECTED TO LOCAL MYSQL (localhost:3306/foundit_db)!");
+                } catch (SQLException ignored) {
+                    // local MySQL not running
+                }
+            }
+
+            if (usingMySQL && mysqlConnection != null) {
+                // Create tables if they do not exist
+                createTablesIfNotExist(mysqlConnection);
+                // Populate sample data if items table is empty
+                seedMySQLIfEmpty(mysqlConnection);
+            } else {
+                System.out.println("[DB] \u26A0\uFE0F Cloud & Local MySQL are currently offline.");
+                System.out.println("[DB] \u2705 Seamlessly running in Resilient In-Memory Mode.");
+                usingMySQL = false;
+            }
 
         } catch (ClassNotFoundException e) {
             System.out.println("[DB] Note: MySQL JDBC driver not in classpath. Using resilient in-memory storage.");
             usingMySQL = false;
-        } catch (SQLException e) {
-            System.out.println(
-                    "[DB] \u26A0\uFE0F MySQL server is not running on localhost:3306 (" + e.getMessage() + ")");
-            System.out
-                    .println("[DB] \u2139\uFE0F Tip: Open XAMPP Control Panel and start MySQL to persist data to SQL.");
-            System.out.println("[DB] \u2705 Seamlessly running in In-Memory Mode (All features remain 100% active).");
+        } catch (Exception e) {
+            System.out.println("[DB] Database initialization notice: " + e.getMessage());
             usingMySQL = false;
         }
 
@@ -205,16 +235,16 @@ public class DatabaseManager {
         try (Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM items")) {
             if (rs.next() && rs.getInt(1) == 0) {
-                System.out.println("[DB] Items table is empty. Seeding initial posts into MySQL...");
-                // Insert user
+                // Insert seed users with passwords
                 stmt.execute(
-                        "INSERT IGNORE INTO users (id, name, username, email, phone, avatar, bio, location, city, reputation_score, is_community_helper) "
-                                +
-                                "VALUES ('usr_me', 'Arjun Rao', 'arjun_foundit', 'arjun.rao@gmail.com', '+91 98765 43210', "
-                                +
-                                "'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', "
-                                +
-                                "'Community volunteer based in Nellore, Andhra Pradesh.', 'Magunta Layout, Nellore', 'Nellore', 98, 1);");
+                        "INSERT IGNORE INTO users (id, name, username, email, password_hash, phone, avatar, bio, location, city, reputation_score, is_community_helper) VALUES "
+                        + "('usr_admin', 'System Administrator', 'admin_foundit', 'admin@gmail.com', 'admin1234', '+91 99999 00000', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', 'System Administrator with full moderation privileges across Nellore.', 'Central Command, Nellore', 'Nellore', 100, 1), "
+                        + "('usr_sushank', 'Sushank Varshith', 'sushank_v', 'sushankvarshith16@gmail.com', 'password123', '+91 94401 23456', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80', 'Tech enthusiast & Nellore community helper.', 'Magunta Layout, Nellore', 'Nellore', 95, 1), "
+                        + "('usr_1', 'Rohan Sharma', 'rohans_99', 'rohan@example.com', 'password123', '+91 98111 22233', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', 'Active helper in Nellore.', 'VRC Centre, Nellore', 'Nellore', 90, 1), "
+                        + "('usr_2', 'Sneha Reddy', 'sneha_r', 'sneha.reddy@nellore.org', 'password123', '+91 98480 11223', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', 'Medical professional & volunteer in Nellore.', 'Gandhi Nagar, Nellore', 'Nellore', 92, 1), "
+                        + "('usr_3', 'Vikram Varma', 'vikram_v', 'vikram.varma@gmail.com', 'password123', '+91 98111 55667', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', 'Active contributor on Trunk Road.', 'Trunk Road, Nellore', 'Nellore', 88, 1), "
+                        + "('usr_4', 'Priya Deshmukh', 'priya_d', 'priya.deshmukh@gmail.com', 'password123', '+91 94411 98765', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', 'Animal lover & dog parent in Magunta Layout.', 'Magunta Layout, Nellore', 'Nellore', 94, 1), "
+                        + "('usr_me', 'Arjun Rao', 'arjun_foundit', 'arjun.rao@gmail.com', 'password123', '+91 98765 43210', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', 'Community volunteer based in Nellore, Andhra Pradesh.', 'Magunta Layout, Nellore', 'Nellore', 98, 1);");
 
                 // Seed items
                 for (ItemPost p : getInitialSeedPosts()) {

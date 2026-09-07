@@ -10,6 +10,8 @@ interface BackendStatusModalProps {
 export const BackendStatusModal: React.FC<BackendStatusModalProps> = ({ isOpen, onClose }) => {
   const [health, setHealth] = useState<BackendHealth | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiUrlInput, setApiUrlInput] = useState(() => apiClient.getCustomApiUrl() || apiClient.getApiBase());
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const checkStatus = async () => {
     setLoading(true);
@@ -18,8 +20,25 @@ export const BackendStatusModal: React.FC<BackendStatusModalProps> = ({ isOpen, 
     setLoading(false);
   };
 
+  const handleSaveApiUrl = (e: React.FormEvent) => {
+    e.preventDefault();
+    apiClient.setCustomApiUrl(apiUrlInput.trim());
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+    checkStatus();
+  };
+
+  const handleResetApiUrl = () => {
+    apiClient.setCustomApiUrl('');
+    setApiUrlInput(apiClient.getApiBase());
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+    checkStatus();
+  };
+
   useEffect(() => {
     if (isOpen) {
+      setApiUrlInput(apiClient.getCustomApiUrl() || apiClient.getApiBase());
       checkStatus();
     }
   }, [isOpen]);
@@ -123,7 +142,56 @@ export const BackendStatusModal: React.FC<BackendStatusModalProps> = ({ isOpen, 
                   In-Memory Store
                 </span>
               )}
+          </div>
+
+          {/* 3. Cross-Device Cloud Sync & API URL Configuration */}
+          <div className="p-4 rounded-2xl bg-[#050c1a]/80 border border-cyan-500/20 text-left">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Backend API Endpoint (Multi-Device Sync)
+                </span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                {health?.resolvedApiUrl || apiUrlInput}
+              </span>
             </div>
+            
+            <p className="text-[11px] text-slate-400 mb-3">
+              To see users and posts across multiple computers, all laptops must connect to the same deployed cloud backend URL (e.g. Railway or Render) instead of localhost.
+            </p>
+
+            <form onSubmit={handleSaveApiUrl} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={apiUrlInput}
+                onChange={(e) => setApiUrlInput(e.target.value)}
+                placeholder="https://your-backend.up.railway.app/api or http://localhost:8080/api"
+                className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-900 border border-cyan-500/30 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Save & Connect
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetApiUrl}
+                  title="Reset to default URL"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+            {saveSuccess && (
+              <p className="text-[11px] text-emerald-400 mt-2 flex items-center gap-1 font-medium animate-fade-in">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Backend URL updated! Diagnostics refreshed.
+              </p>
+            )}
           </div>
         </div>
 

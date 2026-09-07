@@ -77,14 +77,14 @@ export default function App() {
       (currentUser.id === 'usr_sushank' && p.uploader.id === 'usr_1')
   ).length;
 
-  // Synchronize with Java REST backend on mount (only when authenticated)
+  // Synchronize with Java REST backend on mount and when authentication changes
   useEffect(() => {
-    if (!isAuthenticated) return;
     itemService.syncWithBackend().then((fresh) => {
       if (fresh && fresh.length > 0) {
         setPosts(fresh);
       }
     });
+    authService.syncUsersWithBackend().catch(() => {});
   }, [isAuthenticated]);
 
   // ─── Guard: Force login view when session is not valid ──────────

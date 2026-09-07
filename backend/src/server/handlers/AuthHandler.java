@@ -36,6 +36,8 @@ public class AuthHandler implements HttpHandler {
                 handleRegister(exchange);
             } else if (path.endsWith("/profile") && "PUT".equals(method)) {
                 handleUpdateProfile(exchange);
+            } else if (path.endsWith("/users") && "GET".equals(method)) {
+                handleGetAllUsers(exchange);
             } else if ("GET".equals(method)) {
                 // Return default current user
                 User me = userDao.getUserById("usr_me");
@@ -54,6 +56,11 @@ public class AuthHandler implements HttpHandler {
         }
     }
 
+    private void handleGetAllUsers(HttpExchange exchange) throws IOException {
+        java.util.List<User> users = userDao.getAllUsers();
+        sendResponse(exchange, 200, JsonHelper.usersToJson(users));
+    }
+
     private void handleLogin(HttpExchange exchange) throws IOException {
         String body = readBody(exchange);
         String username = JsonHelper.getString(body, "username", "");
@@ -65,7 +72,11 @@ public class AuthHandler implements HttpHandler {
         }
 
         User user = userDao.login(username, password);
-        sendResponse(exchange, 200, JsonHelper.toJson(user));
+        if (user != null) {
+            sendResponse(exchange, 200, JsonHelper.toJson(user));
+        } else {
+            sendResponse(exchange, 401, "{\"error\":\"Invalid credentials\"}");
+        }
     }
 
     private void handleRegister(HttpExchange exchange) throws IOException {
@@ -73,11 +84,16 @@ public class AuthHandler implements HttpHandler {
         String name = JsonHelper.getString(body, "name", "Community Member");
         String username = JsonHelper.getString(body, "username", "user_" + System.currentTimeMillis());
         String email = JsonHelper.getString(body, "email", username + "@example.com");
+        String password = JsonHelper.getString(body, "password", "password123");
         String phone = JsonHelper.getString(body, "phone", "+91 90000 00000");
+        String bio = JsonHelper.getString(body, "bio", "Active FoundIt community helper in Andhra Pradesh.");
+        String location = JsonHelper.getString(body, "location", "Nellore, Andhra Pradesh");
+        String city = JsonHelper.getString(body, "city", "Nellore");
+        String avatar = JsonHelper.getString(body, "avatar", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80");
+        String id = JsonHelper.getString(body, "id", "usr_" + System.currentTimeMillis());
 
-        User newUser = new User("usr_" + System.currentTimeMillis(), name, username, email, phone,
-            "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-            "Active FoundIt community helper in Andhra Pradesh.", "Nellore", "Nellore");
+        User newUser = new User(id, name, username, email, phone, avatar, bio, location, city);
+        newUser.setPassword(password);
 
         User created = userDao.register(newUser);
         sendResponse(exchange, 201, JsonHelper.toJson(created));

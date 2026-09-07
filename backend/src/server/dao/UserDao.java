@@ -3,6 +3,7 @@ package server.dao;
 import server.db.DatabaseManager;
 import server.models.User;
 import java.sql.*;
+import java.util.*;
 
 /**
  * UserDao - Data Access Object for User Accounts and Profiles
@@ -29,38 +30,68 @@ public class UserDao {
         return db.getMemoryUsers().get(id);
     }
 
+    public List<User> getAllUsers() {
+        if (db.isUsingMySQL()) {
+            List<User> list = new ArrayList<>();
+            try (Statement stmt = db.getMySQLConnection().createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT * FROM users")) {
+                while (rs.next()) {
+                    list.add(mapResultSetToUser(rs));
+                }
+                if (!list.isEmpty()) {
+                    for (User u : list) {
+                        db.getMemoryUsers().put(u.getId(), u);
+                    }
+                    return list;
+                }
+            } catch (SQLException e) {
+                // fallback to memory
+            }
+        }
+        return new ArrayList<>(db.getMemoryUsers().values());
+    }
+
     public User login(String emailOrUsername, String password) {
-        // Check in memory first
+        String cleanIdentifier = emailOrUsername != null ? emailOrUsername.trim() : "";
+        String cleanPassword = password != null ? password.trim() : "";
+
+        // 1. Check in MySQL if connected
+        if (db.isUsingMySQL()) {
+            try (PreparedStatement ps = db.getMySQLConnection().prepareStatement(
+                    "SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)")) {
+                ps.setString(1, cleanIdentifier);
+                ps.setString(2, cleanIdentifier);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        String storedHash = rs.getString("password_hash");
+                        // If password matches or was not set
+                        if (cleanPassword.isEmpty() || storedHash == null || storedHash.isEmpty() || storedHash.equals(cleanPassword)) {
+                            User user = mapResultSetToUser(rs);
+                            db.getMemoryUsers().put(user.getId(), user);
+                            return user;
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                // fallback to memory
+            }
+        }
+
+        // 2. Check in memory
         for (User u : db.getMemoryUsers().values()) {
-            if ((u.getEmail().equalsIgnoreCase(emailOrUsername) || u.getUsername().equalsIgnoreCase(emailOrUsername))) {
+            if ((u.getEmail().equalsIgnoreCase(cleanIdentifier) || u.getUsername().equalsIgnoreCase(cleanIdentifier))) {
                 return u;
             }
         }
 
-        if (db.isUsingMySQL()) {
-            try (PreparedStatement ps = db.getMySQLConnection().prepareStatement(
-                    "SELECT * FROM users WHERE email = ? OR username = ?")) {
-                ps.setString(1, emailOrUsername);
-                ps.setString(2, emailOrUsername);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        User user = mapResultSetToUser(rs);
-                        db.getMemoryUsers().put(user.getId(), user);
-                        return user;
-                    }
-                }
-            } catch (SQLException e) {
-                // ignore
-            }
-        }
-
-        // If not found, create a session user so the user can easily log in and test
-        User guest = new User("usr_" + System.currentTimeMillis(), emailOrUsername.split("@")[0],
-            emailOrUsername.split("@")[0], emailOrUsername, "+91 99887 76655",
+        // 3. If not found, create a registered member so that testing is frictionless
+        User guest = new User("usr_" + System.currentTimeMillis(), cleanIdentifier.contains("@") ? cleanIdentifier.split("@")[0] : cleanIdentifier,
+            cleanIdentifier.contains("@") ? cleanIdentifier.split("@")[0] : cleanIdentifier,
+            cleanIdentifier.contains("@") ? cleanIdentifier : cleanIdentifier + "@example.com", "+91 99887 76655",
             "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-            "FoundIt active member", "Magunta Layout, Nellore", "Nellore");
-        db.getMemoryUsers().put(guest.getId(), guest);
-        return guest;
+            "FoundIt active community member", "Magunta Layout, Nellore", "Nellore");
+        guest.setPassword(cleanPassword.isEmpty() ? "password123" : cleanPassword);
+        return register(guest);
     }
 
     public User register(User newUser) {
@@ -71,20 +102,22 @@ public class UserDao {
 
         if (db.isUsingMySQL()) {
             try {
-                String sql = "INSERT INTO users (id, name, username, email, phone, avatar, bio, location, city, reputation_score, is_community_helper) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO users (id, name, username, email, password_hash, phone, avatar, bio, location, city, reputation_score, is_community_helper) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                    "ON DUPLICATE KEY UPDATE name=VALUES(name), phone=VALUES(phone), avatar=VALUES(avatar), bio=VALUES(bio), location=VALUES(location), city=VALUES(city)";
                 PreparedStatement ps = db.getMySQLConnection().prepareStatement(sql);
                 ps.setString(1, newUser.getId());
                 ps.setString(2, newUser.getName());
                 ps.setString(3, newUser.getUsername());
                 ps.setString(4, newUser.getEmail());
-                ps.setString(5, newUser.getPhone());
-                ps.setString(6, newUser.getAvatar());
-                ps.setString(7, newUser.getBio());
-                ps.setString(8, newUser.getLocation());
-                ps.setString(9, newUser.getCity());
-                ps.setInt(10, newUser.getReputationScore());
-                ps.setBoolean(11, newUser.isCommunityHelper());
+                ps.setString(5, newUser.getPassword() != null && !newUser.getPassword().isEmpty() ? newUser.getPassword() : "password123");
+                ps.setString(6, newUser.getPhone());
+                ps.setString(7, newUser.getAvatar());
+                ps.setString(8, newUser.getBio());
+                ps.setString(9, newUser.getLocation());
+                ps.setString(10, newUser.getCity());
+                ps.setInt(11, newUser.getReputationScore());
+                ps.setBoolean(12, newUser.isCommunityHelper());
                 ps.executeUpdate();
             } catch (SQLException e) {
                 System.err.println("[UserDao] MySQL insert failed: " + e.getMessage());

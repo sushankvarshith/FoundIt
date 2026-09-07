@@ -4,8 +4,31 @@
  * Includes graceful timeout handling and automatic fallback.
  */
 
-const resolveApiBase = (): string => {
-  const envUrl = (import.meta.env.VITE_API_URL as string)?.trim();
+const STORAGE_API_URL_KEY = 'foundit_custom_api_url';
+
+export const getCustomApiUrl = (): string => {
+  try {
+    return localStorage.getItem(STORAGE_API_URL_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+export const setCustomApiUrl = (url: string): void => {
+  try {
+    if (!url || !url.trim()) {
+      localStorage.removeItem(STORAGE_API_URL_KEY);
+    } else {
+      localStorage.setItem(STORAGE_API_URL_KEY, url.trim());
+    }
+  } catch {
+    // ignore
+  }
+};
+
+export const resolveApiBase = (): string => {
+  const custom = getCustomApiUrl();
+  const envUrl = custom || (import.meta.env.VITE_API_URL as string)?.trim();
   if (!envUrl) return 'http://localhost:8080/api';
 
   const trimmed = envUrl.replace(/\/+$/, '');
@@ -21,18 +44,25 @@ export interface BackendHealth {
   mysqlConnected?: boolean;
   storageMode?: string;
   itemsCount?: number;
+  usersCount?: number;
+  resolvedApiUrl?: string;
 }
 
 export const apiClient = {
+  getApiBase: resolveApiBase,
+  getCustomApiUrl,
+  setCustomApiUrl,
+
   /**
-   * Check connection to the Java backend on port 8080
+   * Check connection to the Java backend
    */
   async checkHealth(): Promise<BackendHealth> {
+    const base = resolveApiBase();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const res = await fetch(`${API_BASE}/health`, {
+      const res = await fetch(`${base}/health`, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -46,6 +76,8 @@ export const apiClient = {
           mysqlConnected: data.mysqlConnected,
           storageMode: data.storageMode,
           itemsCount: data.itemsCount,
+          usersCount: data.usersCount,
+          resolvedApiUrl: base,
         };
       }
     } catch {
@@ -54,6 +86,7 @@ export const apiClient = {
     return {
       online: false,
       storageMode: 'Offline / Browser LocalStorage Mode',
+      resolvedApiUrl: base,
     };
   },
 
@@ -61,11 +94,12 @@ export const apiClient = {
    * Perform a GET request to the Java backend
    */
   async get<T>(endpoint: string): Promise<T | null> {
+    const base = resolveApiBase();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
@@ -85,11 +119,12 @@ export const apiClient = {
    * Perform a POST request to the Java backend
    */
   async post<T>(endpoint: string, body: any): Promise<T | null> {
+    const base = resolveApiBase();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,11 +148,12 @@ export const apiClient = {
    * Perform a PUT request to the Java backend
    */
   async put<T>(endpoint: string, body: any): Promise<T | null> {
+    const base = resolveApiBase();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -141,11 +177,12 @@ export const apiClient = {
    * Perform a DELETE request to the Java backend
    */
   async delete<T>(endpoint: string): Promise<T | null> {
+    const base = resolveApiBase();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'DELETE',
         signal: controller.signal,
       });

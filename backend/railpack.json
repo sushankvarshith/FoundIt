@@ -4,16 +4,15 @@
   "steps": {
     "build": {
       "commands": [
-        "pwd",
-        "echo '--- ROOT LISTING ---'",
-        "ls -la",
-        "echo '--- ALL DIRS ---'",
-        "find . -type d",
-        "echo '--- JAVA FILES SEARCH ---'",
-        "find . -type f -name \"*.java\"",
+        "echo '--- LS SRC ---'",
+        "ls -la src || echo 'src not found'",
+        "echo '--- LS SRC/SERVER ---'",
+        "ls -la src/server || echo 'src/server not found'",
+        "echo '--- FIND SRC JAVA FILES ---'",
+        "find src -type f -name \"*.java\" || echo 'find failed'",
         "mkdir -p target/classes",
-        "find . -type f -name \"*.java\" > sources.txt",
-        "echo '--- SOURCES.TXT CONTENTS ---'",
+        "find src -type f -name \"*.java\" > sources.txt",
+        "echo '--- SOURCES.TXT ---'",
         "cat sources.txt",
         "javac -cp \"lib/*\" -d target/classes @sources.txt"
       ]

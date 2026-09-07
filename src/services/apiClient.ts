@@ -4,7 +4,15 @@
  * Includes graceful timeout handling and automatic fallback.
  */
 
-export const API_BASE = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8080/api';
+const resolveApiBase = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL as string)?.trim();
+  if (!envUrl) return 'http://localhost:8080/api';
+
+  const trimmed = envUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+export const API_BASE = resolveApiBase();
 
 export interface BackendHealth {
   online: boolean;

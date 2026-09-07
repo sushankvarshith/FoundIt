@@ -4,8 +4,17 @@
   "steps": {
     "build": {
       "commands": [
+        "pwd",
+        "echo '--- ROOT LISTING ---'",
+        "ls -la",
+        "echo '--- ALL DIRS ---'",
+        "find . -type d",
+        "echo '--- JAVA FILES SEARCH ---'",
+        "find . -type f -name \"*.java\"",
         "mkdir -p target/classes",
         "find . -type f -name \"*.java\" > sources.txt",
+        "echo '--- SOURCES.TXT CONTENTS ---'",
+        "cat sources.txt",
         "javac -cp \"lib/*\" -d target/classes @sources.txt"
       ]
     }
